@@ -9,30 +9,35 @@
 
 
 WiFiUDP ntpUDP;
+
+// -----------------------------------------------
+// Edit Below
+// -----------------------------------------------
 const char* ssid     = "<WI-FI SSID HERE>";
 const char* password = "<WI-FI Password here>";
 
 // Pins connected to display
 const int PIN_DIO = 18;
 const int PIN_CLOCK = 19;
+// optional power pin to reset display on boot
+const int PIN_power = 4;
 // usually not needed for display to work
 const int PIN_STB = 7;
 
 const char* ntpServer = "pool.ntp.org";
 const int  gmtOffset_sec = -18000; // currently set to Eastern US
 const long   updateinterval_Msec = 600000; // 10 minutes
-const int brightness = 3;
+const int brightness = 3; // 0-7
+
+// -----------------------------------------------
+// Edit Above
+// -----------------------------------------------
 
 NTPClient timeClient(ntpUDP, ntpServer, gmtOffset_sec, updateinterval_Msec);
-
-// this are the pins that connect to the display
 TM1640 module(PIN_DIO, PIN_CLOCK , PIN_STB); 
-int PIN_power = 4;
-
 
 
 void setup() {
-  // WIFI
   Serial.begin(115200);
   pinMode(PIN_power, OUTPUT);
   digitalWrite(PIN_power, LOW);
@@ -144,9 +149,6 @@ void loop() {
 
   digits[2] =  floor(timeClient.getMinutes()/ 10);
   digits[3] = timeClient.getMinutes() % 10;
-  // Serial.println(timeinfo.tm_hour);
-
-
   unsigned long currentMillis = millis();
   if (currentMillis - lastExecutedMillis_1 >= 500) {
     lastExecutedMillis_1 = currentMillis; 
