@@ -66,7 +66,7 @@ const char* ssid     = "<WI-FI SSID HERE>";
 const char* password = "<WI-FI Password here>";
 ```
 
-### Timezone (fixed offset)
+### Timezone (Including DST)
 
 ```cpp
  // timezone settings
