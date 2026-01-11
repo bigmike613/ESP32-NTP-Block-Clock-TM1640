@@ -50,10 +50,10 @@ The sketch uses these Arduino libraries/headers:
 
 - `WiFi.h`, `WiFiUdp.h`
 - `ArduinoOTA.h`
-- `NTPClient.h` - customized to alarm on NTP issues
+- `NTP.h`
 - `TM1640.h`
 
-Install them via Arduino Library Manager or your build system (make sure to use custom NTPClient fromn this repo).
+Install them via Arduino Library Manager or your build system.
 
 ## Configuration
 
@@ -69,7 +69,9 @@ const char* password = "<WI-FI Password here>";
 ### Timezone (fixed offset)
 
 ```cpp
-const int gmtOffset_sec = -18000; // Eastern US (UTC-5)
+ // timezone settings
+  ntp.ruleDST("EDT", Second, Sun, Mar, 2, -240);
+  ntp.ruleSTD("EST", First, Sun, Nov, 2, -300);
 ```
 
 ### NTP refresh interval
@@ -86,7 +88,7 @@ const int brightness = 3; // 0–7
 
 ## NTP failure indicator (“alarm light”)
 
-The main loop calls `timeClient.update()` regularly. When it fails (e.g., no internet or the NTP server is unreachable), the firmware sets the display’s indicator segments to turn on the **alarm** indicator so you have a visible warning that time sync is failing.
+The main loop calls `ntpUpdateReturnSuccess()` regularly. When it fails (e.g., no internet or the NTP server is unreachable), the firmware sets the display’s indicator segments to turn on the **alarm** indicator so you have a visible warning that time sync is failing.
 
 ## OTA Updates
 
