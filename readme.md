@@ -5,7 +5,7 @@ This project turns an **ESP32** into a Wi‑Fi connected digital clock that sync
 ## What it does
 
 - Connects to Wi‑Fi using credentials in the sketch
-- Retrieves time from `pool.ntp.org` using `NTPClient`
+- Retrieves time from `pool.ntp.org` using `NTP`
 - Displays **12‑hour** time with a **blinking colon**
 - Shows **AM/PM** status using the display’s extra indicator segments
 - **If the NTP server is not reachable, the alarm light/indicator will illuminate**
