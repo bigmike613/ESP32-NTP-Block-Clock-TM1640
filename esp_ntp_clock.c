@@ -4,17 +4,22 @@
 #include <TM1640.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-#include "NTPClient.h"
+#include "NTP.h"
 #include <math.h>
+#include "secrets.h"
 
 
-WiFiUDP ntpUDP;
+WiFiUDP wifiUdp;
+NTP ntp(wifiUdp);
+
+
 
 // -----------------------------------------------
 // Edit Below
 // -----------------------------------------------
-const char* ssid     = "<WI-FI SSID HERE>";
-const char* password = "<WI-FI Password here>";
+// WI-FI
+const char* ssid     = secret_wifi_ssid;
+const char* password = secret_wifi_pass;
 
 // Pins connected to display
 const int PIN_DIO = 18;
@@ -25,18 +30,38 @@ const int PIN_power = 4;
 const int PIN_STB = 7;
 
 const char* ntpServer = "pool.ntp.org";
-const int  gmtOffset_sec = -18000; // currently set to Eastern US
-const long   updateinterval_Msec = 600000; // 10 minutes
-const int brightness = 3; // 0-7
+const uint32_t   updateinterval_Msec = 600000; // 10 minutes
+const int brightness = 6; // 0-7
 
 // -----------------------------------------------
 // Edit Above
 // -----------------------------------------------
 
-NTPClient timeClient(ntpUDP, ntpServer, gmtOffset_sec, updateinterval_Msec);
+
+
 TM1640 module(PIN_DIO, PIN_CLOCK , PIN_STB); 
 
-
+unsigned long lastExecutedMillis_2 = 0;
+unsigned long lastExecutedMillis_3 = 0;
+bool last_update = false;
+bool ntpUpdateReturnSuccess()
+{
+  unsigned long currentMillis = millis();
+  if (currentMillis - lastExecutedMillis_2 >= updateinterval_Msec) {
+    lastExecutedMillis_2 = currentMillis;
+    last_update = ntp.update();
+    return last_update;
+  }
+  else
+  {
+    if (currentMillis - lastExecutedMillis_3 >= 30000 && ! last_update) {
+    lastExecutedMillis_3 = currentMillis;
+    last_update = ntp.update();
+    return last_update;
+    }
+    return last_update;
+  }
+}
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_power, OUTPUT);
@@ -97,8 +122,12 @@ void setup() {
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-  timeClient.begin();
-  timeClient.update();
+ // timezone settings
+  ntp.ruleDST("EDT", Second, Sun, Mar, 2, -240);
+  ntp.ruleSTD("EST", First, Sun, Nov, 2, -300);
+  ntp.updateInterval(10); // this is set low so everytime ntp.update is called, it actually runs update (which only happens every updateinterval_Msec).
+  ntp.begin();
+  ntp.update();
 
   // 2 = AM, 6 = AM + Alarm1
   // module.setSegments(0, 4);
@@ -127,8 +156,7 @@ unsigned long lastExecutedMillis_1 = 0;
 void loop() {
   ArduinoOTA.handle();
   
-
-  int hour24 = timeClient.getHours();  // 0–23
+  int hour24 = ntp.hours();  // 0–23
   int hour12 = hour24 % 12;
   if (hour12 == 0) {
     hour12 = 12;  // midnight or noon
@@ -147,13 +175,15 @@ void loop() {
     digits[1]= hour12 - 10;
   }
 
-  digits[2] =  floor(timeClient.getMinutes()/ 10);
-  digits[3] = timeClient.getMinutes() % 10;
+  digits[2] =  floor(ntp.minutes()/ 10);
+  digits[3] = ntp.minutes() % 10;
+
+
   unsigned long currentMillis = millis();
   if (currentMillis - lastExecutedMillis_1 >= 500) {
     lastExecutedMillis_1 = currentMillis; 
 
-    if (! timeClient.update())
+    if (! ntpUpdateReturnSuccess())
     {
       Serial.println("Failed to obtain time.");
       if (isPM)
