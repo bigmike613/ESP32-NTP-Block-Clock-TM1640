@@ -41,6 +41,7 @@ const int brightness = 6; // 0-7
 
 TM1640 module(PIN_DIO, PIN_CLOCK , PIN_STB); 
 
+unsigned long lastExecutedMillis_1 = 0; 
 unsigned long lastExecutedMillis_2 = 0;
 unsigned long lastExecutedMillis_3 = 0;
 bool last_update = false;
@@ -70,6 +71,7 @@ void setup() {
   digitalWrite(PIN_power, HIGH);
   module.begin(true, brightness);   // on=true, birghtness (range 0-7)
   module.clearDisplay();
+  module.setDisplayToString("HI");
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
@@ -152,7 +154,7 @@ void blink_colon(int digit1, int digit2)
     blink_on = true;
   }
 }
-unsigned long lastExecutedMillis_1 = 0; 
+
 void loop() {
   ArduinoOTA.handle();
   
