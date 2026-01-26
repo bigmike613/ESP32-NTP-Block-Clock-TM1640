@@ -587,8 +587,8 @@ void startStationMode() {
     ArduinoOTA.begin();
 
     // Setup mDNS
-    if (MDNS.begin("ntpclock2")) {
-      Serial.println("mDNS responder started: ntpclock2.local");
+    if (MDNS.begin("ntpclock")) {
+      Serial.println("mDNS responder started: ntpclock.local");
     }
 
     // Setup NTP
