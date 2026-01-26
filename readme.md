@@ -1,123 +1,99 @@
 # ESP32 NTP Block Clock (TM1640)
 
-This project turns an **ESP32** into a Wi‑Fi connected digital clock that syncs time from an **NTP server** and displays it on a **TM1640-based 4‑digit LED display** (common in “block/cube” clocks). It also supports **Arduino OTA** updates.
+Wi-Fi connected digital clock with **web-based configuration** - no hardcoded credentials needed. Syncs time via NTP and displays on TM1640 4-digit LED modules (common in block/cube clocks).
 
-## What it does
-
-- Connects to Wi‑Fi using credentials in the sketch
-- Retrieves time from `pool.ntp.org` using `NTP`
-- Displays **12‑hour** time with a **blinking colon**
-- Shows **AM/PM** status using the display’s extra indicator segments
-- **If the NTP server is not reachable, the alarm light/indicator will illuminate**
-- Supports **Over‑The‑Air (OTA)** firmware updates
+## Features
+- **Captive portal setup** - configure Wi-Fi, timezone, NTP server, and brightness on first boot
+- **Web interface** - manage settings at `http://ntpclock.local` or device IP
+- **8 US timezones** with automatic DST transitions
+- **OTA updates** via Arduino IDE or PlatformIO
+- **Persistent storage** - settings survive reboots
+- 12-hour display with AM/PM indicators and blinking colon
+- Visual alarm when NTP sync fails
 
 ## Hardware
+- **ESP32** (any Arduino-compatible variant)
+- **TM1640 4-digit LED display** (works with many block clock modules like [this 2.5" cube](https://www.amazon.com/dp/B07PFGG8C9))
 
-- **ESP32** (Arduino framework)
-- **TM1640 4‑digit LED display module**
-- Can be used with many “block clock” style displays, including this 2.5" cube clock:
-  - https://www.amazon.com/dp/B07PFGG8C9
-
-> Note: Many retail block clocks include their own controller board. To use this project, you typically need access to the TM1640 display signals (CLK/DIO and optional STB) going to the LED board.
-
-## Default Pinout
-
-Configured in the sketch as:
-
-```cpp
-// Pins connected to display
-const int PIN_DIO   = 18;
-const int PIN_CLOCK = 19;
-// usually not needed for display to work
-const int PIN_STB   = 7;
-// optional for display power reset at boot
-const int PIN_power = 4;
+### Wiring
 ```
-
-### Typical wiring
-
-- **TM1640 DIO → ESP32 GPIO 18**
-- **TM1640 CLK → ESP32 GPIO 19**
-- **TM1640 STB → ESP32 GPIO 7** (often optional depending on module)
-- **VCC/GND** accordingly
-- **GPIO 4** is toggled at boot as an optional power-enable control (useful if you have a transistor/MOSFET controlling display power)
-
-⚠️ Some TM1640 boards are powered at **5V**. Verify your module’s voltage requirements and consider level shifting if needed.
-
-## Software / Libraries
-
-The sketch uses these Arduino libraries/headers:
-
-- `WiFi.h`, `WiFiUdp.h`
-- `ArduinoOTA.h`
-- `NTP.h`
-- `TM1640.h`
-
-Install them via Arduino Library Manager or your build system.
-
-## Configuration
-
-Edit these values in the `.ino/.c` file:
-
-### Wi‑Fi
-
-```cpp
-const char* ssid     = "<WI-FI SSID HERE>";
-const char* password = "<WI-FI Password here>";
+TM1640 DIO → ESP32 GPIO 12
+TM1640 CLK → ESP32 GPIO 13
+TM1640 STB → ESP32 GPIO 7
+GPIO 14 → Optional power control
+VCC/GND → Appropriate power rails
 ```
+NOTE: Some TM1640 modules require 5V. Check your module's specs.
 
-### Timezone (Including DST)
+## Software Requirements
+Install via Arduino Library Manager:
+- **NTP** by Stefan Staub
+- **TM1640** LED driver library
+- Built-in ESP32 libraries (WiFi, WebServer, DNSServer, Preferences, ESPmDNS, ArduinoOTA)
 
-```cpp
- // timezone settings
-  ntp.ruleDST("EDT", Second, Sun, Mar, 2, -240);
-  ntp.ruleSTD("EST", First, Sun, Nov, 2, -300);
-```
+## Quick Start
 
-### NTP refresh interval
+### 1. Flash Firmware
+Upload sketch to ESP32 via USB. No configuration needed.
 
-```cpp
-const long updateinterval_Msec = 600000; // 10 minutes
-```
+### 2. Initial Setup
+- Connect to Wi-Fi network: **NTP-Clock-Setup** (password: `clocksetup`)
+- Captive portal opens automatically, or navigate to `http://192.168.4.1`
+- Select your Wi-Fi network from the scanner
+- Choose timezone, NTP server (default: `pool.ntp.org`), and brightness (0-7)
+- Save and restart
 
-### Brightness
+### 3. Access Web Interface
+After connecting, access at:
+- `http://ntpclock.local` (if mDNS works)
+- `http://[IP_ADDRESS]` (check your router)
 
-```cpp
-const int brightness = 3; // 0–7
-```
+## Web Interface Pages
+- **Status (/)** - WiFi info, current time, NTP sync status
+- **Settings (/settings)** - Change timezone, NTP server, brightness
+- **Reset (/reset)** - Factory reset to AP mode
 
-## NTP failure indicator (“alarm light”)
+## Supported Timezones
+Eastern, Central, Mountain, Pacific, Alaska, Hawaii (no DST), Arizona (no DST), UTC
 
-The main loop calls `ntpUpdateReturnSuccess()` regularly. When it fails (e.g., no internet or the NTP server is unreachable), the firmware sets the display’s indicator segments to turn on the **alarm** indicator so you have a visible warning that time sync is failing.
+DST transitions: 2nd Sunday in March (spring forward), 1st Sunday in November (fall back)
+
+## Display Info
+- **Format:** 12-hour with blinking colon (updates every 500ms)
+- **AM/PM indicators:** Separate segment indicators
+- **NTP sync failure:** Alarm indicator illuminates
+- **Connection status:** Shows "CON" while connecting
 
 ## OTA Updates
+- **Hostname:** `ntpclock`
+- **Default password:** `admin`
 
-OTA is enabled with:
+**Arduino IDE:** Tools → Port → Network Ports → ntpclock  
+**PlatformIO:** Add `upload_protocol = espota` and `upload_port = ntpclock.local` to platformio.ini
 
-```cpp
-ArduinoOTA.setPassword("admin");
-ArduinoOTA.begin();
-```
+## Troubleshooting
 
-- Default password: `admin` (change this for real use)
-- Ensure your network allows OTA traffic and your ESP32 is on the same LAN as your uploader
+**Clock shows "CON" continuously**  
+Wi-Fi connection failed. Clock will restart in AP mode after 30 attempts. Reconnect to setup network.
 
-## Build & Upload
+**NTP sync fails (alarm indicator on)**  
+Check internet connectivity, verify NTP server is reachable, ensure firewall allows UDP port 123.
 
-### Arduino IDE
+**Display blank**  
+Check power/wiring, verify brightness isn't 0, power cycle the ESP32.
 
-1. Install ESP32 board support (Arduino-ESP32)
-2. Install required libraries
-3. Select your ESP32 board and serial port
-4. Upload via USB for the first flash
-5. After it joins Wi‑Fi, upload via the **Network Port** (OTA)
+**Can't access web interface**  
+Use IP address instead of .local, check router for device IP, access via http:// not https://.
 
-### PlatformIO (optional)
+**OTA fails**  
+Verify password, confirm same LAN, check firewall port 3232, try USB upload.
 
-- Use the Arduino framework for ESP32
-- Add libraries in `platformio.ini`
-- Configure OTA with `upload_protocol = espota` if desired
+## Configuration Notes
+- **Settings storage:** ESP32 NVS (non-volatile storage)
+- **NTP sync:** Every 10 minutes, retry every 30 seconds on failure
+- **Default passwords:** AP: `clocksetup`, OTA: `admin` - change both for production use
+- **Wi-Fi password** stored in plaintext in NVS - no external data transmission except NTP queries
 
-## License
 
-Add a license file (e.g., MIT) if you plan to publish this publicly.
+---
+**Compatible with:** ESP32 Arduino Core 2.0.0+
